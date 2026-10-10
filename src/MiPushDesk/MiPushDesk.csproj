@@ -5,7 +5,7 @@
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>MiPushDesk</RootNamespace>
     <AssemblyName>MiPushDesk</AssemblyName>
-    <Version>1.4.1</Version>
+    <Version>1.5.0</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\MiPushDesk.ico</ApplicationIcon>
     <Platforms>x64</Platforms>
@@ -23,7 +23,15 @@
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.4.0" />
     <Content Include="Assets\*.png;Assets\*.ico;Assets\*.svg" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\AppIcons\**" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\artifacts\dependencies\adb\adb.exe" Link="tools\adb\adb.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\artifacts\dependencies\adb\AdbWinApi.dll" Link="tools\adb\AdbWinApi.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\artifacts\dependencies\adb\AdbWinUsbApi.dll" Link="tools\adb\AdbWinUsbApi.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\artifacts\dependencies\adb\NOTICE.txt" Link="tools\adb\NOTICE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\artifacts\dependencies\adb\source.properties" Link="tools\adb\source.properties" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
+  <Target Name="PrepareAdb" BeforeTargets="PrepareForBuild" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Exec Command="pwsh -NoProfile -File &quot;$(MSBuildProjectDirectory)\..\..\scripts\Prepare-Adb.ps1&quot;" />
+  </Target>
   <Target Name="PublishXamlResources" AfterTargets="ComputeFilesToPublish">
     <ItemGroup>
       <XamlResource Include="$(TargetDir)**\*.xbf" />

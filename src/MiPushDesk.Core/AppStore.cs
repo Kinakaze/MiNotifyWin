@@ -152,13 +152,15 @@ public sealed class AppStore(AppPaths paths)
             catch (FormatException) { throw new InvalidDataException("regSecret 需要是 Base64 编码的 AES 密钥。"); }
         }
     }
-    public static string ValidateAccount(string json)
+    public static string ValidateAccount(string json) => ValidateAccount(json, true);
+    public static string ValidateAccountDraft(string json) => ValidateAccount(json, false);
+    private static string ValidateAccount(string json, bool requireSecurity)
     {
         try
         {
             using var document = JsonDocument.Parse(json, new() { MaxDepth = 8 });
             var root = document.RootElement;
-            foreach (var key in new[] { "uuid", "token", "security", "device_uuid" })
+            foreach (var key in new[] { "uuid", "token", "device_uuid" })
                 if (!root.TryGetProperty(key, out var property) || property.ValueKind != JsonValueKind.String
                     || string.IsNullOrEmpty(property.GetString()) || property.GetString()!.Length > 16384)
                     throw new InvalidDataException();
@@ -166,9 +168,16 @@ public sealed class AppStore(AppPaths paths)
             if (!Regex.IsMatch(identity, @"^[0-9]+@xiaomi\.com/[^\s/]{1,256}$", RegexOptions.CultureInvariant)
                 || !long.TryParse(identity.Split('@')[0], NumberStyles.None, CultureInfo.InvariantCulture, out var user) || user <= 0)
                 throw new InvalidDataException();
-            var secret = Convert.FromBase64String(root.GetProperty("security").GetString()!);
-            if (secret.Length is < 8 or > 512) throw new InvalidDataException();
-            CryptographicOperations.ZeroMemory(secret);
+            if (root.TryGetProperty("security", out var security) && security.ValueKind != JsonValueKind.Null
+                && security.ValueKind != JsonValueKind.String) throw new InvalidDataException();
+            var value = security.ValueKind == JsonValueKind.String ? security.GetString() : null;
+            if (requireSecurity || !string.IsNullOrEmpty(value))
+            {
+                var secret = Convert.FromBase64String(value ?? "");
+                var valid = secret.Length is >= 8 and <= 512;
+                CryptographicOperations.ZeroMemory(secret);
+                if (!valid) throw new InvalidDataException();
+            }
             foreach (var key in new[] { "client_attrs", "cloud_attrs" })
                 if (root.TryGetProperty(key, out var property) && property.ValueKind != JsonValueKind.String)
                     throw new InvalidDataException();

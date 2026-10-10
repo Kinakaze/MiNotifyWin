@@ -5,6 +5,12 @@ using System.Xml.Linq;
 using Microsoft.Win32;
 using MiPushDesk.Core;
 
+if (Environment.GetEnvironmentVariable("MIPUSHDESK_FAKE_ADB") is { } fixtureDirectory)
+{
+    await FakeAdb.RunAsync(args, fixtureDirectory);
+    return;
+}
+
 var directory = Path.Combine(Path.GetTempPath(), "MiPushDesk-Checks-" + Guid.NewGuid().ToString("N"));
 var paths = new AppPaths(directory);
 var checks = new List<string>();
@@ -12,6 +18,7 @@ try
 {
     checks.AddRange(await ProtocolChecks.RunAsync(directory));
     checks.AddRange(await AppSecretRecoveryChecks.RunAsync(directory));
+    checks.AddRange(await AccountImportChecks.RunAsync(directory));
     checks.AddRange(await FeatureChecks.RunAsync(directory, args.Contains("--metadata-online")));
     Check("Empty COM errors include a code without logging message contents", () =>
     {

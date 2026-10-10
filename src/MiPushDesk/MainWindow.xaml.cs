@@ -110,7 +110,7 @@ public sealed partial class MainWindow : Window
             }
             catch (Exception error) { ReportError(error); }
         };
-        Closed += (_, _) => { _timer.Stop(); _notifications.Dispose(); _tray.Dispose(); _images.Dispose(); };
+        Closed += (_, _) => { _accountImportStop?.Cancel(); _timer.Stop(); _notifications.Dispose(); _tray.Dispose(); _images.Dispose(); };
     }
     private HashSet<string> LoadRead()
     {
@@ -144,7 +144,7 @@ public sealed partial class MainWindow : Window
             UpdateStatus();
             if ((incoming.Count > 0 || expired.Count > 0) && _page == "inbox") RefreshInbox();
             if (_backend.IsRunning) _retryTicks = 0;
-            if (_settings.AutoConnect && _store.HasAccount && !_backend.IsRunning && ++_retryTicks >= _settings.ReconnectSeconds)
+            if (!_accountWorking && _settings.AutoConnect && _store.HasAccount && !_backend.IsRunning && ++_retryTicks >= _settings.ReconnectSeconds)
             {
                 _retryTicks = 0;
                 await _backend.StartAsync(_settings.HeartbeatSeconds, _settings.ReconnectSeconds);
@@ -240,6 +240,7 @@ public sealed partial class MainWindow : Window
     {
         if (_closing) return;
         _closing = true;
+        _accountImportStop?.Cancel();
         _timer.Stop();
         _notifications.Clear();
         try { await _backend.StopAsync(); }

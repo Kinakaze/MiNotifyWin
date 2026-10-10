@@ -23,14 +23,20 @@ public sealed class ExchangeDocument
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
     };
 
-    public static ExchangeDocument Parse(string json)
+    public static ExchangeDocument Parse(string json) => Read(json, false);
+    public static ExchangeDocument ParseImport(string json) => Read(json, true);
+    private static ExchangeDocument Read(string json, bool draft)
     {
         if (Encoding.UTF8.GetByteCount(json) > 64 * 1024 * 1024) throw new InvalidDataException("JSON 超过 64 MiB。");
         var document = JsonSerializer.Deserialize<ExchangeDocument>(json, Options) ?? throw new InvalidDataException("JSON 为空。");
         if (document.Schema != "mipush-desk" || document.Version != 1) throw new InvalidDataException("需要 mipush-desk / 1 格式。");
         if (document.Account is null && document.AppCredentials is null && document.Settings is null && document.Icons is null && document.Notifications is null && document.Analysis is null)
             throw new InvalidDataException("JSON 没有可用数据。");
-        if (document.Account is { } account) AppStore.ValidateAccount(account.GetRawText());
+        if (document.Account is { } account)
+        {
+            if (draft) AppStore.ValidateAccountDraft(account.GetRawText());
+            else AppStore.ValidateAccount(account.GetRawText());
+        }
         if (document.AppCredentials is { } credentials) AppStore.ValidateAppCredentials(credentials);
         if (document.Settings is { } settings) AppStore.Validate(settings);
         if (document.Analysis is { ValueKind: not JsonValueKind.Object }) throw new InvalidDataException("analysis 必须是对象。");
@@ -61,7 +67,8 @@ public sealed class ExchangeDocument
     public string Summary()
     {
         var parts = new List<string>();
-        if (Account is not null) parts.Add("账号完整");
+        if (Account is { } account) parts.Add(account.TryGetProperty("security", out var key)
+            && key.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(key.GetString()) ? "账号完整" : "尚缺 security");
         if (AppCredentials is not null) parts.Add($"{AppCredentials.Count} 个应用密钥");
         if (Settings is not null) parts.Add("设置");
         if (Icons is not null) parts.Add($"{Icons.Count} 个图标");

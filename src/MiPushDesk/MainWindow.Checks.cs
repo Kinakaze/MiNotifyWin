@@ -94,6 +94,42 @@ public sealed partial class MainWindow
                 || !Notice.Message.Contains("补全通道密钥"))
                 throw new InvalidOperationException("抓包分析导入状态不正确。");
             Notice.IsOpen = false;
+            var accountDocument = ExchangeDocument.ParseImport("""
+                {"schema":"mipush-desk","version":1,"analysis":{"sessions":[{"source":"phone_xmsf","endpoint":"example.com:5222",
+                "bind":{"uuid":"123456789@xiaomi.com/example","token":"example-token","device_uuid":"example-device",
+                "challenge":"example-challenge","packet_id":"example-bind","kick":"0","client_attrs":"","cloud_attrs":"",
+                "signature":"TuJbkH9AA4fC17kDT299whUs7E8=","channel":5,"method":"XMPUSH-PASS"}}]}}
+                """);
+            var accountImport = ConfirmImportAsync(accountDocument, "phone.json");
+            await Task.Delay(200);
+            var accountDialog = OpenDialog();
+            var security = DialogField<PasswordBox>(accountDialog, "AccountSecurity");
+            if (accountDialog.PrimaryButtonText != "验证并保存" || accountDialog.IsPrimaryButtonEnabled)
+                throw new InvalidOperationException("缺少 security 的账号未进入补全流程。");
+            await CaptureAsync("account-completion", accountDialog);
+            var phoneOptions = DialogField<Expander>(accountDialog, "AdbOptions");
+            phoneOptions.IsExpanded = true;
+            await Task.Delay(500);
+            await CaptureAsync("account-device", accountDialog);
+            var wifiOptions = DialogField<Expander>(accountDialog, "AdbWifiOptions");
+            wifiOptions.IsExpanded = true;
+            await Task.Delay(200);
+            await CaptureAsync("account-wifi", accountDialog);
+            wifiOptions.IsExpanded = phoneOptions.IsExpanded = false;
+            security.Password = Convert.ToBase64String("wrong-security"u8);
+            await Task.Delay(100);
+            var verifyButton = Descendants(accountDialog).OfType<Button>().Single(button => button.Name == "PrimaryButton");
+            ((IInvokeProvider)new ButtonAutomationPeer(verifyButton).GetPattern(PatternInterface.Invoke)).Invoke();
+            await Task.Delay(200);
+            if (_store.HasAccount || !DialogField<TextBlock>(accountDialog, "AccountImportStatus").Text.Contains("不匹配"))
+                throw new InvalidOperationException("错误 security 被保存或未显示错误。");
+            security.Password = "c3ludGhldGljLXNlY3JldA==";
+            await Task.Delay(100);
+            await SaveDialogAsync(accountDialog);
+            await accountImport.WaitAsync(TimeSpan.FromSeconds(5));
+            if (!_store.HasAccount || !_store.ReadAccount().Contains("bind_signature_verified"))
+                throw new InvalidOperationException("签名核验后的账号未保存。");
+            Notice.IsOpen = false;
             var jsonTask = ShowJsonAsync(_imports.ExportSettings(_settings).ToJson());
             await Task.Delay(200);
             var jsonDialog = VisualTreeHelper.GetOpenPopupsForXamlRoot(Root.XamlRoot)

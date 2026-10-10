@@ -13,6 +13,7 @@ public sealed partial class MainWindow
 {
     private async Task ShowJsonAsync(string text = "", string title = "JSON")
     {
+        ExchangeDocument? pendingAccount = null;
         var editor = new TextBox
         {
             AcceptsReturn = true, TextWrapping = TextWrapping.NoWrap, Text = text,
@@ -43,7 +44,7 @@ public sealed partial class MainWindow
             Ui.Button("复制", () => Execute(() => { CopyText(editor.Text); summary.Text = "已复制"; return Task.CompletedTask; }), "DeskQuiet", id: "JsonCopy"),
             Ui.Button("导出", () => Execute(async () =>
             {
-                var document = ExchangeDocument.Parse(editor.Text);
+                var document = ExchangeDocument.ParseImport(editor.Text);
                 if (await SavePathAsync("mipush", ".json") is { } file) { AtomicFile.Write(file, document.ToJson()); summary.Text = "已导出"; }
             }), "DeskButton", id: "JsonExport"));
         var content = Ui.Stack(12, toolbar, summary, editor);
@@ -52,7 +53,12 @@ public sealed partial class MainWindow
         dialog.PrimaryButtonClick += async (_, arguments) =>
         {
             var deferral = arguments.GetDeferral();
-            try { await ApplyExchangeAsync(ExchangeDocument.Parse(editor.Text)); }
+            try
+            {
+                var document = ExchangeDocument.ParseImport(editor.Text);
+                if (AccountCandidate.From(document).Count > 0) pendingAccount = document;
+                else await ApplyExchangeAsync(document);
+            }
             catch (Exception error) { arguments.Cancel = true; ShowError(error); }
             finally { deferral.Complete(); }
         };
@@ -62,8 +68,9 @@ public sealed partial class MainWindow
             catch (Exception error) { ShowError(error); }
         }
         await dialog.ShowAsync();
+        if (pendingAccount is not null) await ConfirmImportAsync(pendingAccount);
 
-        void Analyze() => summary.Text = ExchangeDocument.Parse(editor.Text).Summary();
+        void Analyze() => summary.Text = ExchangeDocument.ParseImport(editor.Text).Summary();
         void ShowError(Exception error)
         {
             AppErrors.Record(_paths.Data, error);
@@ -81,12 +88,18 @@ public sealed partial class MainWindow
     private Task ImportSessionAsync() => QuickImportAsync();
     private async Task ImportFileAsync(string file)
     {
-        var document = await Task.Run(() => _imports.Read(file));
+        var document = await Task.Run(() => ExchangeDocument.ParseImport(_imports.ReadText(file)));
+        await ConfirmImportAsync(document, Path.GetFileName(file));
+    }
+    private async Task ConfirmImportAsync(ExchangeDocument document, string name = "")
+    {
+        var accounts = AccountCandidate.From(document);
+        if (accounts.Count > 0) { await CompleteAccountAsync(document, accounts, name); return; }
         var summary = Ui.Wrap(document.Summary(), 14);
         AutomationProperties.SetAutomationId(summary, "ImportSummary");
         var guidance = Ui.Wrap(document.Account is not null ? "导入后使用此账号接收通知。"
             : document.Analysis is not null ? _store.HasAccount ? "抓包分析会保存，继续使用当前账号。"
-            : "文件包含抓包分析，尚缺可连接账号。核验通道密钥 security 后，再导入完整会话。" : "导入文件中的数据。", 13);
+            : "未捕获完整登录信息。请重新抓包，导入后可补全 security。" : "导入文件中的数据。", 13);
         AutomationProperties.SetAutomationId(guidance, "ImportGuidance");
         var errorText = Ui.Wrap("", 12);
         errorText.Visibility = Visibility.Collapsed;
@@ -97,7 +110,7 @@ public sealed partial class MainWindow
             XamlRoot = Root.XamlRoot, RequestedTheme = Root.RequestedTheme, Title = "导入 JSON",
             PrimaryButtonText = analysisOnly ? "保存分析" : "导入", SecondaryButtonText = "查看 JSON", CloseButtonText = "取消",
             DefaultButton = ContentDialogButton.Primary,
-            Content = Ui.Stack(14, Ui.Wrap(Path.GetFileName(file), 12), summary, guidance, errorText)
+            Content = Ui.Stack(14, Ui.Wrap(name, 12), summary, guidance, errorText)
         };
         dialog.PrimaryButtonClick += async (_, arguments) =>
         {

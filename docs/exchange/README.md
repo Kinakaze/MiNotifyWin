@@ -22,19 +22,15 @@ Windows 和 Android 共用 `mipush-desk / 1`，使用 UTF-8 `.json` 文件。粘
 | `notifications` | 历史通知；按 `message_key` 去重，标为已读，不触发弹窗 |
 | `analysis` | Android 抓包快照，包括凭据状态、Session、BIND 字段、事件和计数 |
 
-只有 `account` 用于登录。`analysis.credentials` 中缺失的 `security` 保留为 `null`，Windows 显示“尚缺 security”，不会替换已有账号。Android 导入文件后保留其账号、应用密钥、设置、图标和通知；分享 Session 时将 `analysis` 更新为当前抓包快照。Android 不应用 Windows 外观设置。
+只有 `account` 用于登录。`analysis.credentials` 中缺失的 `security` 保留为 `null`；Windows 在导入时提供填写和手机提取入口，验证后生成完整 `account`。验证失败或取消不会替换已有账号。Android 导入文件后保留其账号、应用密钥、设置、图标和通知；分享时将 `analysis` 更新为当前抓包快照。Android 不应用 Windows 外观设置。
 
 ## 账号
 
 `account` 必须有非空字符串 `uuid`、`token`、`security`、`device_uuid`。`uuid` 为 `数字@xiaomi.com/资源`，数字部分在正 64 位有符号整数范围内；`security` 为 Base64，解码后 8～512 字节。可选 `client_attrs`、`cloud_attrs` 必须为字符串。其他协议字段原样保留。
 
-普通 Session 抓包不携带 security。诊断工具只在日志 token 匹配、BIND 签名核验通过且账号唯一时生成 `account`。它保留原始 `analysis`，不会把分析快照伪装成已恢复凭据。
+普通抓包不携带 security。MiNotifyWin 1.5.0 起内置 ADB，可通过 USB／Wi-Fi 调试读取手机日志，按 token 匹配并核验原始 BIND 签名。没有对应日志时会启动 MiNoitifyApp 0.5.0 的一次性诊断。也可手动填写 security。
 
-```powershell
-python tools/recover_security.py session.json diagnostic.log --output account.json
-```
-
-`session.json` 使用 Android 的“分享 Session JSON”获得；同一命令也接受“保存抓包 ZIP”的文件，ZIP 路径会额外独立校验 PCAP。诊断日志仍需通过已验证的提取流程获得。
+桌面允许在导入界面补全缺少 security 的 `account`；保存前必须完成验证，无抓包签名时使用登录验证。同一 JSON 中的旧账号和新抓包分别列出供选择，其他数据段保留。
 
 ## 外观与 Logo
 

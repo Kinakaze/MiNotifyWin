@@ -74,19 +74,23 @@ public static class MiPushMessage
     public static byte[] Bind(ChannelAccount account, string challenge, string? packetId = null)
     {
         packetId ??= "win-" + Convert.ToHexString(RandomNumberGenerator.GetBytes(8)).ToLowerInvariant();
-        var attributes = new SortedDictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["challenge"] = challenge, ["chid"] = "5", ["client_attrs"] = account.ClientAttributes,
-            ["cloud_attrs"] = account.CloudAttributes, ["from"] = account.Uuid, ["id"] = packetId,
-            ["kick"] = "0", ["to"] = "xiaomi.com", ["token"] = account.Token
-        };
-        var signed = "XMPUSH-PASS&" + string.Join('&', attributes.Select(pair => pair.Key + "=" + pair.Value)) + "&" + account.Security;
-        var signature = Convert.ToBase64String(SHA1.HashData(Encoding.UTF8.GetBytes(signed)));
+        var signature = BindSignature(account, challenge, packetId, "0");
         var header = SlimProtocol.Protobuf((1, 5), (2, ulong.Parse(account.User)), (3, account.Server), (4, account.Resource),
             (5, "BIND"), (7, packetId), (9, 0));
         var payload = SlimProtocol.Protobuf((1, account.Token), (2, "0"), (3, "XMPUSH-PASS"),
             (4, account.ClientAttributes), (5, account.CloudAttributes), (6, signature));
         return SlimProtocol.Blob(2, header, payload);
+    }
+    public static string BindSignature(ChannelAccount account, string challenge, string packetId, string kick)
+    {
+        var attributes = new SortedDictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["challenge"] = challenge, ["chid"] = "5", ["client_attrs"] = account.ClientAttributes,
+            ["cloud_attrs"] = account.CloudAttributes, ["from"] = account.Uuid, ["id"] = packetId,
+            ["kick"] = kick, ["to"] = "xiaomi.com", ["token"] = account.Token
+        };
+        var signed = "XMPUSH-PASS&" + string.Join('&', attributes.Select(pair => pair.Key + "=" + pair.Value)) + "&" + account.Security;
+        return Convert.ToBase64String(SHA1.HashData(Encoding.UTF8.GetBytes(signed)));
     }
     public static byte[] SessionKey(string challenge, string deviceUuid)
     {
