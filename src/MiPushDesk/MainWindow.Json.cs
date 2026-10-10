@@ -1,0 +1,127 @@
+using System.Text.Json;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using MiPushDesk.Core;
+using MiPushDesk.Services;
+using Windows.ApplicationModel.DataTransfer;
+
+namespace MiPushDesk;
+
+public sealed partial class MainWindow
+{
+    private async Task ShowJsonAsync(string text = "", string title = "JSON")
+    {
+        var editor = new TextBox
+        {
+            AcceptsReturn = true, TextWrapping = TextWrapping.NoWrap, Text = text,
+            FontFamily = new FontFamily("Consolas"), FontSize = 13, Height = 340,
+            PlaceholderText = "粘贴 JSON，或打开文件", Padding = new(12)
+        };
+        ScrollViewer.SetVerticalScrollBarVisibility(editor, ScrollBarVisibility.Auto);
+        ScrollViewer.SetHorizontalScrollBarVisibility(editor, ScrollBarVisibility.Auto);
+        AutomationProperties.SetAutomationId(editor, "JsonEditor");
+        var summary = Ui.Wrap("mipush-desk / 1", 12);
+        AutomationProperties.SetAutomationId(summary, "JsonSummary");
+        var dialog = new ContentDialog
+        {
+            XamlRoot = Root.XamlRoot, RequestedTheme = Root.RequestedTheme, Title = title,
+            PrimaryButtonText = "导入", CloseButtonText = "关闭", DefaultButton = ContentDialogButton.Close
+        };
+        dialog.Resources["ContentDialogMaxWidth"] = 820d;
+        var toolbar = Ui.Row(6,
+            Ui.Button("粘贴", () => Execute(async () => { editor.Text = await Clipboard.GetContent().GetTextAsync(); Analyze(); }), "DeskButton", id: "JsonPaste"),
+            Ui.Button("打开", () => Execute(async () => { if (await PickAsync(".json") is { } file) { editor.Text = _imports.ReadText(file); Analyze(); } }), "DeskButton", id: "JsonOpen"),
+            Ui.Button("分析", () => Execute(() => { Analyze(); return Task.CompletedTask; }), "DeskQuiet", id: "JsonAnalyze"),
+            Ui.Button("格式化", () => Execute(() =>
+            {
+                using var document = JsonDocument.Parse(editor.Text, new JsonDocumentOptions { MaxDepth = JsonData.Options.MaxDepth });
+                editor.Text = JsonSerializer.Serialize(document.RootElement, JsonData.Options);
+                return Task.CompletedTask;
+            }), "DeskQuiet", id: "JsonFormat"),
+            Ui.Button("复制", () => Execute(() => { CopyText(editor.Text); summary.Text = "已复制"; return Task.CompletedTask; }), "DeskQuiet", id: "JsonCopy"),
+            Ui.Button("导出", () => Execute(async () =>
+            {
+                var document = ExchangeDocument.Parse(editor.Text);
+                if (await SavePathAsync("mipush", ".json") is { } file) { AtomicFile.Write(file, document.ToJson()); summary.Text = "已导出"; }
+            }), "DeskButton", id: "JsonExport"));
+        var content = Ui.Stack(12, toolbar, summary, editor);
+        content.Width = 680;
+        dialog.Content = content;
+        dialog.PrimaryButtonClick += async (_, arguments) =>
+        {
+            var deferral = arguments.GetDeferral();
+            try { await ApplyExchangeAsync(ExchangeDocument.Parse(editor.Text)); }
+            catch (Exception error) { arguments.Cancel = true; ShowError(error); }
+            finally { deferral.Complete(); }
+        };
+        if (text.Length > 0)
+        {
+            try { Analyze(); }
+            catch (Exception error) { ShowError(error); }
+        }
+        await dialog.ShowAsync();
+
+        void Analyze() => summary.Text = ExchangeDocument.Parse(editor.Text).Summary();
+        void ShowError(Exception error)
+        {
+            AppErrors.Record(_paths.Data, error);
+            summary.Text = error is JsonException jsonError
+                ? $"JSON 错误：第 {jsonError.LineNumber + 1} 行，第 {jsonError.BytePositionInLine + 1} 列。"
+                : AppErrors.Describe(error);
+        }
+        async void Execute(Func<Task> action)
+        {
+            try { await action(); }
+            catch (Exception error) { ShowError(error); }
+        }
+    }
+    private Task ImportSettingsAsync() => ShowJsonAsync(title: "导入设置");
+    private Task ImportSessionAsync() => ShowJsonAsync(title: "导入会话");
+    private Task ShowSessionAsync()
+    {
+        var analysisFile = Path.Combine(_paths.Data, "analysis.json");
+        var credentials = _store.ReadAppCredentials();
+        var session = new ExchangeDocument
+        {
+            Account = _store.HasAccount ? JsonSerializer.Deserialize<JsonElement>(_store.ReadAccount()) : null,
+            AppCredentials = credentials.Count > 0 ? credentials : null,
+            Analysis = File.Exists(analysisFile) ? ExchangeDocument.Parse(File.ReadAllText(analysisFile)).Analysis : null
+        };
+        return ShowJsonAsync(session.Account is not null || session.Analysis is not null || session.AppCredentials is not null ? session.ToJson() : "", "会话");
+    }
+
+    private async Task ApplyExchangeAsync(ExchangeDocument document)
+    {
+        var restart = document.Account is not null || document.AppCredentials is not null;
+        var wasRunning = _backend.IsRunning;
+        if (restart) await _backend.StopAsync();
+        try { _settings = _imports.Apply(document, _settings, _store); }
+        catch
+        {
+            if (wasRunning) await _backend.StartAsync(_settings.HeartbeatSeconds, _settings.ReconnectSeconds);
+            throw;
+        }
+        if (document.Notifications is { } incoming)
+        {
+            var imported = _importedNotifications.Merge(incoming);
+            _feed.Restore(incoming.Select(record => record.Key));
+            foreach (var record in imported) _read.Add(record.Key);
+            SaveRead();
+            var merged = _records.Concat(imported).DistinctBy(record => record.Key)
+                .OrderBy(record => record.ReceivedAt).ToList();
+            _records.Clear();
+            foreach (var record in merged) NotificationTimeline.Apply(_records, record, DateTimeOffset.UtcNow);
+        }
+        if (restart)
+        {
+            if (_settings.AutoConnect && !_renderMode) await _backend.StartAsync(_settings.HeartbeatSeconds, _settings.ReconnectSeconds);
+        }
+        _backend.UpdateTiming(_settings.HeartbeatSeconds, _settings.ReconnectSeconds);
+        SaveSettings(true);
+        WarmAppMetadata(AppCatalog.Packages(_settings).Concat(_records.Select(record => record.Package)));
+        UpdateStatus();
+        Notify("已导入");
+    }
+}

@@ -1,0 +1,22 @@
+{
+  "schema": "mipush-desk",
+  "version": 1,
+  "exportedAt": "2026-10-09T12:00:00Z",
+  "settings": {
+    "version": 2,
+    "appearance": {
+      "theme": "paper",
+      "layout": "cards",
+      "toastMode": "native",
+      "toastStyle": "rich",
+      "showImages": false,
+      "useAppIcons": true,
+      "playSound": false,
+      "fontSize": 14,
+      "cornerRadius": 10
+    },
+    "apps": {
+      "com.example.app": { "name": "示例应用", "muted": false }
+    }
+  }
+}

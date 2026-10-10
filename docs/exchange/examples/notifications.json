@@ -1,0 +1,21 @@
+{
+  "schema": "mipush-desk",
+  "version": 1,
+  "exportedAt": "2026-10-09T12:00:00Z",
+  "notifications": [
+    {
+      "message_key": "example-notification-1",
+      "received_at": "2026-10-09T11:58:00Z",
+      "package": "com.example.app",
+      "title": "示例通知",
+      "description": "完整内容支持多行。\n导入的历史记录标为已读，不重新弹窗。",
+      "url": "https://example.com/notification",
+      "extra": {
+        "notification_style_button_left_name": "查看",
+        "notification_style_button_left_web_uri": "https://example.com/notification"
+      },
+      "is_notification": true,
+      "duplicate": false
+    }
+  ]
+}

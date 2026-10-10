@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MiPush exchange document v1",
+  "type": "object",
+  "required": ["schema", "version"],
+  "additionalProperties": false,
+  "anyOf": [
+    { "required": ["account"] }, { "required": ["settings"] }, { "required": ["icons"] },
+    { "required": ["notifications"] }, { "required": ["analysis"] }, { "required": ["appCredentials"] }
+  ],
+  "properties": {
+    "schema": { "const": "mipush-desk" },
+    "version": { "const": 1 },
+    "exportedAt": { "type": "string", "format": "date-time" },
+    "account": { "$ref": "#/$defs/account" },
+    "appCredentials": {
+      "type": "object", "maxProperties": 2048,
+      "propertyNames": { "pattern": "^[A-Za-z0-9_]+(?:\\.[A-Za-z0-9_]+)+$", "maxLength": 256 },
+      "additionalProperties": {
+        "type": "object", "required": ["regSecret"], "additionalProperties": false,
+        "properties": {
+          "appId": { "type": "string", "maxLength": 256 }, "regId": { "type": "string", "maxLength": 4096 },
+          "regSecret": { "type": "string", "contentEncoding": "base64", "minLength": 24, "maxLength": 44 }
+        }
+      }
+    },
+    "settings": { "$ref": "#/$defs/settings" },
+    "icons": {
+      "type": "object", "maxProperties": 10000,
+      "propertyNames": { "pattern": "^[0-9a-f]{64}\\.(png|jpg)$" },
+      "additionalProperties": { "type": "string", "contentEncoding": "base64" }
+    },
+    "notifications": { "type": "array", "maxItems": 10000, "items": { "$ref": "#/$defs/notification" } },
+    "analysis": { "type": "object" }
+  },
+  "$defs": {
+    "account": {
+      "type": "object", "required": ["uuid", "token", "security", "device_uuid"],
+      "properties": {
+        "uuid": { "type": "string", "pattern": "^[0-9]+@xiaomi\\.com/[^\\s/]{1,256}$" },
+        "token": { "type": "string", "minLength": 1, "maxLength": 16384 },
+        "security": { "type": "string", "minLength": 1, "maxLength": 16384, "contentEncoding": "base64" },
+        "device_uuid": { "type": "string", "minLength": 1, "maxLength": 16384 },
+        "client_attrs": { "type": "string" }, "cloud_attrs": { "type": "string" }
+      }
+    },
+    "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+    "colors": {
+      "type": ["object", "null"], "additionalProperties": false,
+      "properties": {
+        "background": { "$ref": "#/$defs/color" }, "sidebar": { "$ref": "#/$defs/color" },
+        "surface": { "$ref": "#/$defs/color" }, "text": { "$ref": "#/$defs/color" },
+        "muted": { "$ref": "#/$defs/color" }, "border": { "$ref": "#/$defs/color" },
+        "accent": { "$ref": "#/$defs/color" }
+      }
+    },
+    "appearance": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "theme": { "enum": ["paper", "midnight", "ocean", "forest"], "default": "paper" },
+        "colors": { "$ref": "#/$defs/colors" },
+        "layout": { "enum": ["cards", "compact", "conversation"], "default": "cards" },
+        "toastMode": { "enum": ["native", "tray", "off"], "default": "native" },
+        "toastStyle": { "enum": ["rich", "standard", "compact"], "default": "rich" },
+        "useAppIcons": { "type": "boolean", "default": true },
+        "showImages": { "type": "boolean", "default": false },
+        "defaultImage": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}\\.(png|jpg)$" },
+        "useMessageColors": { "type": "boolean", "default": false },
+        "playSound": { "type": "boolean", "default": false },
+        "fontSize": { "type": "number", "minimum": 12, "maximum": 20, "default": 14 },
+        "cornerRadius": { "type": "number", "minimum": 0, "maximum": 24, "default": 10 }
+      }
+    },
+    "settings": {
+      "type": "object", "required": ["version"], "additionalProperties": false,
+      "properties": {
+        "version": { "const": 2 }, "appearance": { "$ref": "#/$defs/appearance" },
+        "apps": {
+          "type": "object", "maxProperties": 2048,
+          "propertyNames": { "pattern": "^[A-Za-z0-9_]+(?:\\.[A-Za-z0-9_]+)+$", "maxLength": 256 },
+          "additionalProperties": {
+            "type": "object", "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string", "maxLength": 128 },
+              "icon": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}\\.(png|jpg)$" },
+              "muted": { "type": "boolean" }
+            }
+          }
+        },
+        "hiddenApps": { "type": "array", "uniqueItems": true, "maxItems": 2048, "items": { "type": "string", "pattern": "^[A-Za-z0-9_]+(?:\\.[A-Za-z0-9_]+)+$", "maxLength": 256 } },
+        "useXiaomiMetadata": { "type": "boolean", "default": true },
+        "useBuiltInIcons": { "type": "boolean", "default": true },
+        "iconLibraryName": { "type": "string", "maxLength": 128 },
+        "libraryIcons": {
+          "type": "object", "maxProperties": 10000,
+          "propertyNames": { "pattern": "^[A-Za-z0-9_]+(?:\\.[A-Za-z0-9_]+)+$", "maxLength": 256 },
+          "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{64}\\.(png|jpg)$" }
+        },
+        "autoConnect": { "type": "boolean" }, "closeToTray": { "type": "boolean" },
+        "notificationsEnabled": { "type": "boolean" }, "quietHoursEnabled": { "type": "boolean" },
+        "quietStartHour": { "type": "integer", "minimum": 0, "maximum": 23 },
+        "quietEndHour": { "type": "integer", "minimum": 0, "maximum": 23 },
+        "heartbeatSeconds": { "type": "integer", "minimum": 5, "maximum": 300 },
+        "reconnectSeconds": { "type": "integer", "minimum": 5, "maximum": 86400, "default": 60 }
+      }
+    },
+    "notification": {
+      "type": "object", "required": ["message_key", "received_at", "package", "is_notification"],
+      "additionalProperties": true,
+      "properties": {
+        "message_key": { "type": "string", "minLength": 1 },
+        "received_at": { "type": "string", "format": "date-time" },
+        "message_ts": { "type": ["integer", "null"] },
+        "message_id": { "type": "string" }, "app_id": { "type": "string" },
+        "action": { "type": "integer" }, "action_name": { "type": "string" }, "is_request": { "type": "boolean" },
+        "notify_id": { "type": ["integer", "null"] }, "notify_type": { "type": ["integer", "null"] },
+        "pass_through": { "type": "integer" }, "topic": { "type": "string" }, "collapse_key": { "type": "string" },
+        "expires_at": { "type": ["string", "null"], "format": "date-time" },
+        "body_status": { "type": "string" }, "body": { "type": ["object", "null"] }, "metadata": { "type": ["object", "null"] },
+        "operation": { "type": "string" }, "control_type": { "type": "string" },
+        "control_extra": { "type": "object", "additionalProperties": { "type": "string" } },
+        "is_message": { "type": "boolean" }, "replayed": { "type": "boolean" },
+        "package": { "type": "string", "maxLength": 256, "pattern": "^[A-Za-z0-9_]+(?:\\.[A-Za-z0-9_]+)+$" },
+        "title": { "type": "string" }, "description": { "type": "string" }, "url": { "type": "string" },
+        "extra": { "type": "object", "additionalProperties": { "type": "string" } },
+        "encrypted_action": { "type": "boolean" }, "raw_path": { "type": "string" },
+        "payload_text": { "type": ["string", "null"] },
+        "is_notification": { "const": true }, "duplicate": { "const": false }
+      }
+    }
+  }
+}

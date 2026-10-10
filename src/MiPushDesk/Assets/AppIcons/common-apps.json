@@ -1,0 +1,34 @@
+{
+  "aliases": {
+    "com.ss.android.ugc.livelite": "com.ss.android.ugc.aweme",
+    "com.ss.android.ugc.aweme.lite": "com.ss.android.ugc.aweme",
+    "com.ss.android.lark": "com.larksuite.suite",
+    "com.sdu.didi.psnger": "com.didiglobal.passenger",
+    "com.qiyi.video.lite": "com.qiyi.video",
+    "com.xiaomi.vipaccount": "com.mi.global.bbs"
+  },
+  "images": {
+    "com.jingdong.app.mall": { "url": "https://pp.myapp.com/ma_icon/0/icon_7193_1790662066/256", "source": "https://sj.qq.com/appdetail/com.jingdong.app.mall" },
+    "com.douban.frodo": { "url": "https://pp.myapp.com/ma_icon/0/icon_10909968_1790733426/256", "source": "https://sj.qq.com/appdetail/com.douban.frodo" }
+  },
+  "packages": [
+    "ctrip.android.view", "com.dragon.read", "com.xs.fm", "com.xiaomi.vipaccount",
+    "com.jingdong.app.mall", "com.zhihu.android", "com.sankuai.meituan", "com.sankuai.meituan.takeoutnew",
+    "com.xunmeng.pinduoduo", "com.tencent.wework", "com.alibaba.android.rimet", "com.ximalaya.ting.android",
+    "com.taobao.idlefish", "com.taobao.trip", "com.tmall.wireless", "me.ele", "com.achievo.vipshop",
+    "com.smile.gifmaker", "com.kuaishou.nebula", "com.ss.android.article.news", "com.ss.android.article.lite",
+    "com.UCMobile", "com.quark.browser", "com.tencent.mtt", "com.tencent.qqmusic", "com.kugou.android",
+    "cn.kuwo.player", "com.tencent.qqlive", "com.youku.phone", "com.hunantv.imgo.activity", "com.cmcc.cmvideo",
+    "com.douban.frodo", "com.tencent.androidqqmail", "com.tencent.wemeet.app", "com.tencent.docs",
+    "cn.wps.moffice_eng", "com.sina.mail.free", "com.netease.mail", "com.netease.mobimail",
+    "com.unionpay", "com.icbc", "com.chinamworld.main", "com.cmbchina.ccd.pluto.cmbActivity",
+    "com.bankcomm.Bankcomm", "com.chinamworld.bocmbci", "com.android.bankabc", "com.eg.android.AlipayGphone",
+    "com.MobileTicket", "com.Qunar", "com.yipiao", "com.dianping.v1",
+    "com.anjuke.android.app", "com.lianjia.beike", "com.wuba", "com.hpbr.bosszhipin", "com.zhaopin.social",
+    "com.cainiao.wireless", "com.sf.activity", "com.greenpoint.android.mc10086.activity", "com.sinovatech.unicom.ui",
+    "com.ct.client", "com.xiaomi.smarthome", "com.xiaomi.shop", "com.xiaomi.wearable", "com.huami.watch.hmwatchmanager",
+    "com.gotokeep.keep", "com.duokan.reader", "com.tencent.weread", "com.qidian.QDReader", "com.shuqi.controller",
+    "cn.gov.pbc.dcep", "com.eg.android.AlipayGphone", "com.benqu.wuta", "com.tencent.gamehelper.smoba",
+    "com.netease.uu", "com.duowan.kiwi", "air.tv.douyu.android"
+  ]
+}

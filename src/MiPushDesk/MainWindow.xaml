@@ -1,0 +1,32 @@
+<Window x:Class="MiPushDesk.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid x:Name="Root" Background="{StaticResource DeskBackground}" RequestedTheme="Light" AllowDrop="True" DragOver="Root_DragOver" Drop="Root_Drop">
+        <Grid.RowDefinitions><RowDefinition Height="48"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="184"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Border Grid.RowSpan="2" Background="{StaticResource DeskSidebar}" BorderBrush="{StaticResource DeskBorder}" BorderThickness="0,0,1,0" />
+        <Grid x:Name="AppTitleBar" Grid.ColumnSpan="2" Background="Transparent">
+            <TextBlock Text="MiPush Desk" FontSize="15" FontWeight="SemiBold" Margin="27,0,0,0" VerticalAlignment="Center" />
+        </Grid>
+        <Grid Grid.Row="1" Padding="12,20,12,18">
+            <StackPanel>
+                <Button x:Name="InboxNav" Tag="inbox" Style="{StaticResource DeskNav}" Click="Navigate_Click" AutomationProperties.AutomationId="NavInbox">
+                    <StackPanel Orientation="Horizontal" Spacing="12"><FontIcon Glyph="&#xE8BD;" FontSize="17"/><TextBlock Text="通知" FontSize="13"/></StackPanel>
+                </Button>
+                <Button x:Name="AppsNav" Tag="apps" Style="{StaticResource DeskNav}" Click="Navigate_Click" AutomationProperties.AutomationId="NavApps">
+                    <StackPanel Orientation="Horizontal" Spacing="12"><FontIcon Glyph="&#xE71D;" FontSize="17"/><TextBlock Text="应用" FontSize="13"/></StackPanel>
+                </Button>
+                <Button x:Name="AppearanceNav" Tag="appearance" Style="{StaticResource DeskNav}" Click="Navigate_Click" AutomationProperties.AutomationId="NavAppearance">
+                    <StackPanel Orientation="Horizontal" Spacing="12"><FontIcon Glyph="&#xE790;" FontSize="17"/><TextBlock Text="外观" FontSize="13"/></StackPanel>
+                </Button>
+                <Button x:Name="SettingsNav" Tag="settings" Style="{StaticResource DeskNav}" Click="Navigate_Click" AutomationProperties.AutomationId="NavSettings">
+                    <StackPanel Orientation="Horizontal" Spacing="12"><FontIcon Glyph="&#xE713;" FontSize="17"/><TextBlock Text="设置" FontSize="13"/></StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+        <Grid Grid.Row="1" Grid.Column="1" Margin="30,23,30,23">
+            <ContentControl x:Name="PageHost" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+            <InfoBar x:Name="Notice" IsOpen="False" IsClosable="True" VerticalAlignment="Bottom" Margin="0,0,0,4" Canvas.ZIndex="10" />
+        </Grid>
+    </Grid>
+</Window>

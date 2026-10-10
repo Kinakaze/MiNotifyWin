@@ -1,0 +1,35 @@
+{
+  "schema": "mipush-desk",
+  "version": 1,
+  "exportedAt": "2026-10-09T12:00:00Z",
+  "analysis": {
+    "schema_version": 1,
+    "credentials": {
+      "uuid": "123456789@xiaomi.com/example",
+      "token": "example-token",
+      "device_uuid": "example-device",
+      "security": null,
+      "ready_for_windows_login": false
+    },
+    "sessions": [
+      {
+        "id": 1,
+        "source": "phone_xmsf",
+        "endpoint": "example.com:5222",
+        "bind": {
+          "uuid": "123456789@xiaomi.com/example",
+          "token": "example-token",
+          "device_uuid": "example-device",
+          "challenge": "example-challenge",
+          "packet_id": "example-bind",
+          "kick": "0",
+          "client_attrs": "",
+          "cloud_attrs": "",
+          "signature": "TuJbkH9AA4fC17kDT299whUs7E8=",
+          "channel": 5,
+          "method": "XMPUSH-PASS"
+        }
+      }
+    ]
+  }
+}
