@@ -81,8 +81,6 @@ internal static class AppSecretRecoveryChecks
                 && replayed.All(record => record.MessageId != "deleted"), "Recovery replay lost plaintext or resurrected a deleted record");
             var secretsFile = File.ReadAllBytes(context.Paths.AppCredentials);
             Assert(!Encoding.UTF8.GetString(secretsFile).Contains(Secret), "App credentials are not protected at rest");
-            foreach (var file in Directory.EnumerateFiles(context.Paths.Listener, "*.json*"))
-                Assert(!File.ReadAllText(file).Contains(Secret), "Recovery leaked a secret into a journal or status file");
             var protectedResponses = Directory.GetFiles(Path.Combine(context.Paths.Listener, "raw"), "*.bin.dpapi");
             Assert(protectedResponses.Length == 2, "Recovery response containers were not protected");
             foreach (var file in protectedResponses)
@@ -99,6 +97,8 @@ internal static class AppSecretRecoveryChecks
             Assert(context.Store.ReadAppCredentials().Count == 2 && context.Receiver.Snapshot().BodiesReprocessed == 0,
                 "An empty refresh erased credentials or repeated history replay");
         }, seedHistory: true);
+        foreach (var file in Directory.EnumerateFiles(Path.Combine(directory, "recovery-success", "listener"), "*.json*"))
+            Assert(!File.ReadAllText(file).Contains(Secret), "Recovery leaked a secret into a journal or status file");
         checks.Add("Native recovery interleaves notifications, commits complete pages, protects secrets and replays history without restoring deleted messages");
         checks.Add("Manual recovery prevents duplicates and an empty result preserves existing keys");
 
