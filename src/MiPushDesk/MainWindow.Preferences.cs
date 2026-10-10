@@ -147,7 +147,8 @@ public sealed partial class MainWindow
             SettingRow("定时免打扰", null, Toggle(_settings.QuietHoursEnabled, value => { _settings.QuietHoursEnabled = value; SaveSettings(); }, "QuietHours")),
             SettingRow("免打扰时段", "相同时为全天", Ui.Row(8, quietStart, Ui.Text("至", 12, "DeskMuted"), quietEnd)));
         var transfer = Ui.Stack(0, TransferRow("设置", "外观与应用", ImportSettingsAsync, ExportSettingsAsync, "ImportSettings", "SettingsMenu"), Ui.Rule(),
-            TransferRow("会话", _store.HasAccount ? "已导入" : "未导入", ImportSessionAsync, ShowSessionAsync, "ImportSession", "SessionMenu"));
+            TransferRow("会话", _store.HasAccount ? "账号已导入" : File.Exists(Path.Combine(_paths.Data, "analysis.json"))
+                ? "已保存分析 · 登录信息待补全" : "未导入", ImportSessionAsync, ShowSessionAsync, "ImportSession", "SessionMenu"));
         var metadata = Ui.Stack(0,
             SettingRow("小米名称与图标", null, Toggle(_settings.UseXiaomiMetadata, value =>
             {
@@ -168,6 +169,8 @@ public sealed partial class MainWindow
     {
         var more = IconButton("更多操作", "\uE712", () => { }, menuId);
         var menu = new MenuFlyout();
+        var paste = new MenuFlyoutItem { Text = "粘贴 JSON", Icon = Ui.Icon("\uE77F") };
+        paste.Click += (_, _) => Run(() => ShowJsonAsync(title: "导入" + title)); menu.Items.Add(paste);
         var view = new MenuFlyoutItem { Text = "查看与导出", Icon = Ui.Icon("\uE8A5") };
         view.Click += (_, _) => Run(export); menu.Items.Add(view);
         more.Flyout = menu;

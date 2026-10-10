@@ -255,8 +255,10 @@ public sealed partial class MainWindow : Window
         using var picker = NativeFileDialog.Save(name, extension);
         return Task.FromResult(picker.Show(WinRT.Interop.WindowNative.GetWindowHandle(this)));
     }
-    private Task QuickImportAsync() => ShowJsonAsync();
-    private Task ImportFileAsync(string file) => ShowJsonAsync(_imports.ReadText(file));
+    private async Task QuickImportAsync()
+    {
+        if (await PickAsync(".json") is { } file) await ImportFileAsync(file);
+    }
     private void Root_DragOver(object sender, DragEventArgs arguments)
     {
         if (arguments.DataView.Contains(StandardDataFormats.StorageItems)) { arguments.AcceptedOperation = DataPackageOperation.Copy; arguments.DragUIOverride.Caption = "打开 JSON"; }

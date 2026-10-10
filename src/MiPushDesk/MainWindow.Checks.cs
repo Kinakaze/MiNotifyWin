@@ -76,6 +76,24 @@ public sealed partial class MainWindow
             if (Find<Button>("ImportSettings").Content is null || Find<Button>("ImportSession").Content is null)
                 throw new InvalidOperationException("缺少设置与会话入口。");
             await CaptureAsync("settings-data");
+            var captureFile = Path.Combine(directory, "phone-capture.json");
+            AtomicFile.Write(captureFile, new ExchangeDocument
+            {
+                Analysis = JsonSerializer.SerializeToElement(new { credentials = new { security = (string?)null }, sessions = new[] { new { bind_extracted = true } } })
+            }.ToJson());
+            var captureImport = ImportFileAsync(captureFile);
+            await Task.Delay(200);
+            var captureDialog = OpenDialog();
+            if (captureDialog.PrimaryButtonText != "保存分析" || !DialogField<TextBlock>(captureDialog, "ImportSummary").Text.Contains("抓包分析")
+                || !DialogField<TextBlock>(captureDialog, "ImportGuidance").Text.Contains("security"))
+                throw new InvalidOperationException("手机抓包导入没有区分分析与可连接账号。");
+            await CaptureAsync("phone-import", captureDialog);
+            await SaveDialogAsync(captureDialog);
+            await captureImport.WaitAsync(TimeSpan.FromSeconds(5));
+            if (_store.HasAccount || !File.Exists(Path.Combine(_paths.Data, "analysis.json"))
+                || !Notice.Message.Contains("补全通道密钥"))
+                throw new InvalidOperationException("抓包分析导入状态不正确。");
+            Notice.IsOpen = false;
             var jsonTask = ShowJsonAsync(_imports.ExportSettings(_settings).ToJson());
             await Task.Delay(200);
             var jsonDialog = VisualTreeHelper.GetOpenPopupsForXamlRoot(Root.XamlRoot)

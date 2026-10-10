@@ -100,7 +100,6 @@ public sealed partial class MiPushReceiver
         lock (_stateGate)
         {
             _state.AppCredentialsCount = _credentials.Count;
-            _state.AppSecretRecoveryState = "complete";
             _state.AppSecretsUpdatedAt = DateTimeOffset.UtcNow;
         }
         try
@@ -112,6 +111,7 @@ public sealed partial class MiPushReceiver
         {
             lock (_stateGate) _state.AppSecretRecoveryError = "history_failed";
         }
+        lock (_stateGate) _state.AppSecretRecoveryState = "complete";
         Event("app_secret_recovery_completed", new
         {
             pages = _state.AppSecretRecoveryPages, applications = _state.AppSecretsRecovered,

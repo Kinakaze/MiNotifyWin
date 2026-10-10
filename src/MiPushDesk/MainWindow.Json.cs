@@ -77,8 +77,43 @@ public sealed partial class MainWindow
             catch (Exception error) { ShowError(error); }
         }
     }
-    private Task ImportSettingsAsync() => ShowJsonAsync(title: "导入设置");
-    private Task ImportSessionAsync() => ShowJsonAsync(title: "导入会话");
+    private Task ImportSettingsAsync() => QuickImportAsync();
+    private Task ImportSessionAsync() => QuickImportAsync();
+    private async Task ImportFileAsync(string file)
+    {
+        var document = await Task.Run(() => _imports.Read(file));
+        var summary = Ui.Wrap(document.Summary(), 14);
+        AutomationProperties.SetAutomationId(summary, "ImportSummary");
+        var guidance = Ui.Wrap(document.Account is not null ? "导入后使用此账号接收通知。"
+            : document.Analysis is not null ? _store.HasAccount ? "抓包分析会保存，继续使用当前账号。"
+            : "文件包含抓包分析，尚缺可连接账号。核验通道密钥 security 后，再导入完整会话。" : "导入文件中的数据。", 13);
+        AutomationProperties.SetAutomationId(guidance, "ImportGuidance");
+        var errorText = Ui.Wrap("", 12);
+        errorText.Visibility = Visibility.Collapsed;
+        var analysisOnly = document.Analysis is not null && document.Account is null && document.AppCredentials is null
+            && document.Settings is null && document.Icons is null && document.Notifications is null;
+        var dialog = new ContentDialog
+        {
+            XamlRoot = Root.XamlRoot, RequestedTheme = Root.RequestedTheme, Title = "导入 JSON",
+            PrimaryButtonText = analysisOnly ? "保存分析" : "导入", SecondaryButtonText = "查看 JSON", CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Primary,
+            Content = Ui.Stack(14, Ui.Wrap(Path.GetFileName(file), 12), summary, guidance, errorText)
+        };
+        dialog.PrimaryButtonClick += async (_, arguments) =>
+        {
+            var deferral = arguments.GetDeferral();
+            try { await ApplyExchangeAsync(document); }
+            catch (Exception error)
+            {
+                arguments.Cancel = true;
+                AppErrors.Record(_paths.Data, error);
+                errorText.Text = AppErrors.Describe(error);
+                errorText.Visibility = Visibility.Visible;
+            }
+            finally { deferral.Complete(); }
+        };
+        if (await dialog.ShowAsync() == ContentDialogResult.Secondary) await ShowJsonAsync(document.ToJson(), "导入 JSON");
+    }
     private Task ShowSessionAsync()
     {
         var analysisFile = Path.Combine(_paths.Data, "analysis.json");
@@ -122,6 +157,8 @@ public sealed partial class MainWindow
         SaveSettings(true);
         WarmAppMetadata(AppCatalog.Packages(_settings).Concat(_records.Select(record => record.Package)));
         UpdateStatus();
-        Notify("已导入");
+        Notify(document.Account is not null ? "账号已导入" : document.Analysis is not null
+            ? _store.HasAccount ? "抓包分析已保存，继续使用当前账号。" : "抓包分析已保存；补全通道密钥后才能连接。"
+            : "已导入 · " + document.Summary());
     }
 }
