@@ -124,7 +124,7 @@ internal static class ProtocolChecks
                         Assert(saved.Count == 1 && saved[0].PayloadText == "plaintext payload", "ACK occurred before persistence or duplicate displayed");
                     }
                     await stream.WriteAsync(SlimProtocol.Frame(ServerBlob("KICK", SlimProtocol.Protobuf((1, "wait"), (2, "synthetic-reason"))), key), stop.Token);
-                    Assert((await ReadAsync(stream, key, stop.Token)).Command == "CLOSE", "Native session did not close after KICK");
+                    Assert((await ReadPastHeartbeatsAsync(stream, key, stop.Token)).Command == "CLOSE", "Native session did not close after KICK");
                     while (receiver.Snapshot().RetryAt is null) await Task.Delay(10, stop.Token);
                     Assert(receiver.Snapshot().RetryAt > DateTimeOffset.UtcNow.AddSeconds(3), "Configured reconnect interval was ignored");
                     receiver.UpdateTiming(TimeSpan.FromMilliseconds(80), TimeSpan.FromMilliseconds(120));
@@ -132,7 +132,7 @@ internal static class ProtocolChecks
                 else
                 {
                     stop.Cancel();
-                    Assert((await ReadAsync(stream, key, CancellationToken.None)).Command == "CLOSE", "Graceful cancellation missing CLOSE");
+                    Assert((await ReadPastHeartbeatsAsync(stream, key, CancellationToken.None)).Command == "CLOSE", "Graceful cancellation missing CLOSE");
                 }
             }
             await run.WaitAsync(TimeSpan.FromSeconds(3));
@@ -236,6 +236,12 @@ internal static class ProtocolChecks
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken); deadline.CancelAfter(TimeSpan.FromSeconds(3));
         return await SlimProtocol.ReadFrameAsync(stream, key, TimeSpan.FromSeconds(2), deadline.Token);
+    }
+    private static async Task<SlimBlob> ReadPastHeartbeatsAsync(Stream stream, byte[] key, CancellationToken cancellationToken)
+    {
+        SlimBlob response;
+        do { response = await ReadAsync(stream, key, cancellationToken); } while (response.Command == "PING");
+        return response;
     }
     private static void Assert(bool value, string message) { if (!value) throw new InvalidOperationException(message); }
     private static void Expect<TException>(Action action) where TException : Exception

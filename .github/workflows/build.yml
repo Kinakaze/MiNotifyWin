@@ -9,8 +9,8 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-dotnet@v6.0.0
         with:
           dotnet-version: |
             8.0.x
@@ -21,7 +21,7 @@ jobs:
       - name: Package
         shell: pwsh
         run: ./scripts/Package.ps1
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: MiNotifyWin-win-x64
           path: artifacts/releases/
